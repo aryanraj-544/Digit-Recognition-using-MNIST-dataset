@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digit Recognition App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .drawing-section {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .canvas-container {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            border: 3px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #drawingCanvas {
+            display: block;
+            cursor: crosshair;
+            background: #000;
+        }
+
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        .instructions {
+            flex: 1;
+            min-width: 250px;
+            background: rgba(103, 126, 234, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .instructions h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .instructions ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .instructions li {
+            margin-bottom: 10px;
+            padding: 8px 0;
+            color: #555;
+            font-size: 1.1em;
+        }
+
+        .instructions li:before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-clear {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            color: white;
+        }
+
+        .btn-clear:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-predict {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+        }
+
+        .btn-predict:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
+        }
+
+        .btn-save {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .results {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .prediction-main {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .prediction-digit {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .prediction-confidence {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .confidence-high { color: #4ecdc4; }
+        .confidence-medium { color: #667eea; }
+        .confidence-low { color: #ff6b6b; }
+
+        .top-predictions {
+            margin-top: 20px;
+        }
+
+        .top-predictions h4 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.2em;
+        }
+
+        .prediction-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .prediction-item {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .prediction-item:first-child {
+            border-color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.2);
+        }
+
+        .prediction-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .status-error {
+            background: rgba(255, 107, 107, 0.2);
+            color: #d63031;
+        }
+
+        .status-success {
+            background: rgba(78, 205, 196, 0.2);
+            color: #00b894;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .drawing-section {
+                flex-direction: column;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔢 Digit Recognition</h1>
+        
+        <div class="drawing-section">
+            <div class="canvas-container">
+                <div class="canvas-wrapper">
+                    <canvas id="drawingCanvas" width="280" height="280"></canvas>
+                    <svg class="grid-overlay" width="280" height="280">
+                        <!-- Grid lines -->
+                        <defs>
+                            <pattern id="grid" width="70" height="70" patternUnits="userSpaceOnUse">
+                                <path d="M 70 0 L 0 0 0 70" fill="none" stroke="#ffffff" stroke-width="1"/>
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grid)" />
+                    </svg>
+                </div>
+            </div>
+            
+            <div class="instructions">
+                <h3>How to Use:</h3>
+                <ul>
+                    <li>Draw a single digit (0-9) in the black canvas</li>
+                    <li>Predictions update automatically as you draw</li>
+                    <li>Use clear button to start over</li>
+                    <li>Toggle save to enable/disable image saving</li>
+                    <li>Manual predict for immediate results</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-clear" onclick="clearCanvas()">Clear Canvas</button>
+            <button class="btn btn-predict" onclick="predictDigit()">Predict Now</button>
+            <button class="btn btn-save" onclick="toggleSave()" id="saveBtn">Save: ON</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing your drawing...</p>
+        </div>
+        
+        <div class="results" id="results" style="display: none;">
+            <div class="prediction-main">
+                <div class="prediction-digit" id="predictedDigit">?</div>
+                <div class="prediction-confidence" id="confidence">Confidence: 0%</div>
+            </div>
+            
+            <div class="top-predictions">
+                <h4>Top 5 Predictions:</h4>
+                <div class="prediction-list" id="topPredictions"></div>
+            </div>
+            
+            <div class="status-message" id="statusMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let autoPredict = true;
+        let predictionTimeout;
+        let saveEnabled = true;
+
+        // Initialize canvas
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 12;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Drawing event listeners
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', handleTouch);
+        canvas.addEventListener('touchmove', handleTouch);
+        canvas.addEventListener('touchend', stopDrawing);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            [lastX, lastY] = getCoordinates(e);
+            
+            // Clear any pending prediction
+            if (predictionTimeout) {
+                clearTimeout(predictionTimeout);
+            }
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const [currentX, currentY] = getCoordinates(e);
+            
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+            
+            [lastX, lastY] = [currentX, currentY];
+            
+            // Schedule auto-prediction
+            if (autoPredict) {
+                if (predictionTimeout) {
+                    clearTimeout(predictionTimeout);
+                }
+                predictionTimeout = setTimeout(() => {
+                    if (!isDrawing) {
+                        predictDigit();
+                    }
+                }, 1000);
+            }
+        }
+
+        function stopDrawing() {
+            if (!isDrawing) return;
+            isDrawing = false;
+            
+            // Trigger prediction after drawing stops
+            if (autoPredict) {
+                if (predictionTimeout) {
+                    clearTimeout(predictionTimeout);
+                }
+                predictionTimeout = setTimeout(predictDigit, 500);
+            }
+        }
+
+        function getCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            return [
+                (e.clientX - rect.left) * scaleX,
+                (e.clientY - rect.top) * scaleY
+            ];
+        }
+
+        function handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                            e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Hide results
+            document.getElementById('results').style.display = 'none';
+            
+            // Clear any pending predictions
+            if (predictionTimeout) {
+                clearTimeout(predictionTimeout);
+            }
+        }
+
+        function predictDigit() {
+            const imageData = canvas.toDataURL('image/png');
+            
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ image: imageData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                displayResults(data);
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                console.error('Error:', error);
+                showStatus('Error occurred during prediction', 'error');
+            });
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const digitDiv = document.getElementById('predictedDigit');
+            const confidenceDiv = document.getElementById('confidence');
+            const topPredictionsDiv = document.getElementById('topPredictions');
+            
+            if (data.prediction) {
+                digitDiv.textContent = data.prediction;
+                confidenceDiv.textContent = `Confidence: ${data.confidence}%`;
+                
+                // Set confidence color
+                confidenceDiv.className = 'prediction-confidence';
+                if (data.confidence > 60) {
+                    confidenceDiv.classList.add('confidence-high');
+                } else if (data.confidence > 30) {
+                    confidenceDiv.classList.add('confidence-medium');
+                } else {
+                    confidenceDiv.classList.add('confidence-low');
+                }
+                
+                // Display top predictions
+                topPredictionsDiv.innerHTML = '';
+                data.top_predictions.forEach(pred => {
+                    const predDiv = document.createElement('div');
+                    predDiv.className = 'prediction-item';
+                    predDiv.innerHTML = `
+                        <strong>${pred.digit}</strong><br>
+                        ${pred.probability}%
+                    `;
+                    topPredictionsDiv.appendChild(predDiv);
+                });
+                
+                showStatus('Prediction successful!', 'success');
+            } else {
+                digitDiv.textContent = '?';
+                confidenceDiv.textContent = 'No prediction';
+                topPredictionsDiv.innerHTML = '<p>No digit detected</p>';
+                showStatus(data.message || 'No digit detected', 'error');
+            }
+            
+            resultsDiv.style.display = 'block';
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.style.display = 'block';
+        }
+
+        function toggleSave() {
+            fetch('/toggle_save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                saveEnabled = data.save_enabled;
+                document.getElementById('saveBtn').textContent = `Save: ${saveEnabled ? 'ON' : 'OFF'}`;
+                showStatus(data.message, 'success');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showStatus('Error toggling save mode', 'error');
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key.toLowerCase() === 'c') {
+                clearCanvas();
+            } else if (e.key.toLowerCase() === 'p') {
+                predictDigit();
+            } else if (e.key.toLowerCase() === 's') {
+                toggleSave();
+            }
+        });
+    </script>
+</body>
+</html>

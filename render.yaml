@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: digit-recognition-app
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.18
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
